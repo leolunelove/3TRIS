@@ -7,6 +7,8 @@ export const SPAWN_ROW = HIDDEN_ROWS;
 export const PIECE_IDS = ["I", "O", "T", "S", "Z", "J", "L"] as const;
 export type PieceId = (typeof PIECE_IDS)[number];
 
+export type GameMode = "endless" | "sprint";
+
 export type Phase = "ready" | "playing" | "paused" | "over";
 
 export type Overlay = "settings" | "help" | "results" | null;
@@ -84,12 +86,15 @@ export type Settings = {
 export type Records = {
   version: number;
   highScore: number;
+  sprintBestMs?: number;
   longestMs: number;
   highestLevel: number;
   mostLines: number;
 };
 
 export type RunRecord = {
+  mode?: GameMode;
+  completed?: boolean;
   at: number;
   score: number;
   lines: number;

@@ -2,6 +2,7 @@ import { cellsAt, getKicks, getKicks180, spawnX } from "./pieces";
 import { COLS, HIDDEN_ROWS, PIECE_IDS, ROWS, SPAWN_ROW, VISIBLE_ROWS } from "./types";
 import type {
   ActivePiece,
+  GameMode,
   Cell,
   ClearEvent,
   ClearKind,
@@ -25,7 +26,7 @@ export type EngineEvent =
   | { type: "clear"; event: ClearEvent }
   | { type: "level"; level: number }
   | { type: "spawn"; id: PieceId }
-  | { type: "over"; reason: string; cells: Point[] }
+  | { type: "over"; reason: string; cells: Point[]; completed?: boolean }
   | { type: "start" }
   | { type: "score"; amount: number; total: number };
 
@@ -108,6 +109,7 @@ export class Engine {
   combo = -1;
   b2b = false;
   phase: Phase = "ready";
+  mode: GameMode = "endless";
   gravityAcc = 0;
   lockTimer = 0;
   lockResets = MAX_LOCK_RESETS;
@@ -491,7 +493,7 @@ export class Engine {
     this.score += gain;
     this.lines += full.length;
     const prevLevel = this.level;
-    this.level = Math.floor(this.lines / LINES_PER_LEVEL) + 1;
+    this.level = this.mode === "sprint" ? 1 : Math.floor(this.lines / LINES_PER_LEVEL) + 1;
     if (isDifficult(kind)) this.b2b = true;
     else if (full.length > 0 && tspin === "none") this.b2b = false;
 
@@ -521,6 +523,11 @@ export class Engine {
     this.grid = next;
     this.clearing = [];
     this.clearT = 0;
+    if (this.mode === "sprint" && this.lines >= 40) {
+      this.phase = "over";
+      this.emit({ type: "over", reason: "40 lines cleared", cells: [], completed: true });
+      return;
+    }
     this.spawn(this.take());
   }
 
@@ -532,14 +539,15 @@ export class Engine {
     }
     if (this.phase !== "playing") return;
 
+    // Count clear animations too; stop the sprint clock on the final placement.
+    if (!(this.mode === "sprint" && this.lines >= 40)) this.timeMs += dt * 1000;
+
     if (this.clearing.length) {
       const dur = this.settings.reducedMotion ? LINE_CLEAR_MS_REDUCED : LINE_CLEAR_MS;
       this.clearT -= dt / (dur / 1000);
       if (this.clearT <= 0) this.finishClear();
       return;
     }
-
-    this.timeMs += dt * 1000;
 
     const p = this.active;
     if (!p) return;

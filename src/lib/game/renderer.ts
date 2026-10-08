@@ -165,8 +165,14 @@ export class Renderer {
         this.drawCell(x, visY, color, shadow[cell.id], {
           flash: death.has(`${x},${y}`) ? Math.max(flash, 0.55) : flash,
           alpha: clearing ? 0.35 + snap.clearT * 0.65 : 1,
+          squash: flashMap.has(`${x},${y}`) && !settings.reducedMotion ? juice.squash : 1,
         });
       }
+    }
+
+    if (snap.clearing.length && !settings.reducedMotion) {
+      ctx.fillStyle = `rgba(220,255,245,${snap.clearT * 0.3})`;
+      for (const y of snap.clearing) ctx.fillRect(0, (y - HIDDEN_ROWS) * s, w, s);
     }
 
     if (snap.phase === "over" && death.size) {
@@ -189,9 +195,9 @@ export class Renderer {
         const gcells = cellsAt(p.id, p.x, snap.ghostY, p.rot);
         for (const c of gcells) {
           if (c.y < HIDDEN_ROWS) continue;
-          this.drawCell(c.x, c.y - HIDDEN_ROWS, fill[p.id], shadow[p.id], {
+          this.drawCell(c.x, c.y - HIDDEN_ROWS, mix(fill[p.id], "#eaf9f2", 0.3), shadow[p.id], {
             ghost: true,
-            alpha: ghostOpacity,
+            alpha: Math.min(1, ghostOpacity * 1.9),
           });
         }
       }

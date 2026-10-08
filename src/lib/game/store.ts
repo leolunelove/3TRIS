@@ -1,12 +1,15 @@
 import { create } from "zustand";
 import { EMPTY_RECORDS, loadHistory, loadRecords } from "./records";
 import { DEFAULT_SETTINGS, loadSettings, saveSettings } from "./settings";
-import type { Overlay, Phase, PieceId, Records, RunRecord, Settings } from "./types";
+import type { GameMode, Overlay, Phase, PieceId, Records, RunRecord, Settings } from "./types";
 
 export type SettingsTab = "controls" | "video" | "audio" | "game";
 
 export type HudState = {
   phase: Phase;
+  mode: GameMode;
+  completed: boolean;
+  clearSerial: number;
   overlay: Overlay;
   score: number;
   lines: number;
@@ -42,6 +45,9 @@ const bootHistory = typeof window === "undefined" ? [] : loadHistory();
 
 export const useTris = create<HudState & Actions>((set, get) => ({
   phase: "ready",
+  mode: "endless",
+  completed: false,
+  clearSerial: 0,
   overlay: null,
   score: 0,
   lines: 0,
@@ -89,7 +95,7 @@ export function formatScore(n: number): string {
 
 export function clearLabel(kind: string, b2b: boolean, combo: number): string {
   const names: Record<string, string> = {
-    single: "",
+    single: "SINGLE",
     double: "DOUBLE",
     triple: "TRIPLE",
     tetris: "QUAD",
@@ -104,6 +110,10 @@ export function clearLabel(kind: string, b2b: boolean, combo: number): string {
   const bits = [];
   if (b2b && base) bits.push("B2B");
   if (base) bits.push(base);
-  if (combo >= 1) bits.push(`×${combo + 1}`);
+  if (combo >= 1) bits.push(`${combo + 1} COMBO`);
   return bits.join("  ");
+}
+
+export function formatSprintTime(ms: number): string {
+  return `${formatTime(ms)}.${String(Math.floor(ms % 1000 / 10)).padStart(2, "0")}`;
 }

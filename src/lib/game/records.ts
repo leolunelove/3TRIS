@@ -1,4 +1,4 @@
-import type { Records, RunRecord } from "./types";
+import type { GameMode, Records, RunRecord } from "./types";
 
 export const RECORDS_KEY = "3tris-records-v1";
 export const HISTORY_KEY = "3tris-history-v1";
@@ -13,10 +13,10 @@ export const EMPTY_RECORDS: Records = {
   mostLines: 0,
 };
 
-export function loadRecords(): Records {
+export function loadRecords(mode: GameMode = "endless"): Records {
   if (typeof window === "undefined") return { ...EMPTY_RECORDS };
   try {
-    const raw = localStorage.getItem(RECORDS_KEY);
+    const raw = localStorage.getItem(mode === "sprint" ? "3tris-sprint-records-v1" : RECORDS_KEY);
     if (!raw) return { ...EMPTY_RECORDS };
     const parsed = JSON.parse(raw) as Partial<Records>;
     return {
@@ -52,10 +52,10 @@ export function appendHistory(run: RunRecord): RunRecord[] {
   }
   return next;
 }
-export function saveRecords(r: Records) {
+export function saveRecords(r: Records, mode: GameMode = "endless") {
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(RECORDS_KEY, JSON.stringify(r));
+    localStorage.setItem(mode === "sprint" ? "3tris-sprint-records-v1" : RECORDS_KEY, JSON.stringify(r));
   } catch {
     /* ignore */
   }
@@ -66,13 +66,16 @@ export type BestFlags = {
   time: boolean;
   level: boolean;
   lines: boolean;
+  sprint: boolean;
 };
 
 export function applyRun(
   records: Records,
-  run: { score: number; timeMs: number; level: number; lines: number },
+  run: { score: number; timeMs: number; level: number; lines: number; completed?: boolean },
+  mode: GameMode = "endless",
 ): { records: Records; flags: BestFlags } {
   const flags: BestFlags = {
+    sprint: mode === "sprint" && !!run.completed && (!records.sprintBestMs || run.timeMs < records.sprintBestMs),
     score: run.score > records.highScore,
     time: run.timeMs > records.longestMs,
     level: run.level > records.highestLevel,
@@ -80,11 +83,12 @@ export function applyRun(
   };
   const next: Records = {
     version: RECORDS_VERSION,
+    sprintBestMs: flags.sprint ? run.timeMs : records.sprintBestMs,
     highScore: Math.max(records.highScore, run.score),
     longestMs: Math.max(records.longestMs, run.timeMs),
     highestLevel: Math.max(records.highestLevel, run.level),
     mostLines: Math.max(records.mostLines, run.lines),
   };
-  if (flags.score || flags.time || flags.level || flags.lines) saveRecords(next);
+  if (Object.values(flags).some(Boolean)) saveRecords(next, mode);
   return { records: next, flags };
 }

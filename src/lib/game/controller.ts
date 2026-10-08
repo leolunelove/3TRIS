@@ -92,9 +92,9 @@ export function createController(opts: {
       audio.lineClear(e.event.lines, difficult);
       if (e.event.combo >= 1) audio.combo(e.event.combo);
       const label = clearLabel(e.event.kind, e.event.b2b, e.event.combo);
-      useTris.getState().patch({ lastClearLabel: label || null });
+      useTris.getState().patch({ lastClearLabel: `${label} +${e.event.scoreGain}`, clearSerial: useTris.getState().clearSerial + 1 });
       labelTimer = 1.1;
-      if (engine.score > lastBestScore && lastBestScore > 0) {
+      if (engine.mode === "endless" && engine.score > lastBestScore && lastBestScore > 0) {
         const rec = useTris.getState().records;
         if (engine.score > rec.highScore) {
           useTris.getState().patch({ newBest: true });
@@ -110,19 +110,24 @@ export function createController(opts: {
       toastTimer = 1.4;
     }
     if (e.type === "over") {
-      audio.gameOver();
-      const rec = loadRecords();
+      if (e.completed) audio.levelUp(); else audio.gameOver();
+      input.enabled = false;
+      input.clearHeld();
+      const rec = loadRecords(engine.mode);
       const { records, flags } = applyRun(rec, {
         score: engine.score,
         timeMs: engine.timeMs,
         level: engine.level,
         lines: engine.lines,
-      });
+        completed: e.completed,
+      }, engine.mode);
       lastBestScore = records.highScore;
       const pieces = engine.pieces;
       const pps = engine.timeMs > 0 ? pieces / (engine.timeMs / 1000) : 0;
       const history = appendHistory({
         at: Date.now(),
+        mode: engine.mode,
+        completed: !!e.completed,
         score: engine.score,
         lines: engine.lines,
         level: engine.level,
@@ -137,11 +142,12 @@ export function createController(opts: {
         history,
         pieces,
         bestCrossMs,
-        deathReason: e.reason,
-        newBest: flags.score && engine.score > 0,
+        completed: !!e.completed,
+        deathReason: e.completed ? null : e.reason,
+        newBest: engine.mode === "sprint" ? flags.sprint : flags.score && engine.score > 0,
         overlay: null,
       });
-      if (flags.score) audio.newBest();
+      if (engine.mode === "sprint" ? flags.sprint : flags.score) audio.newBest();
       syncHud(true);
     }
     if (e.type === "start") {
@@ -150,6 +156,7 @@ export function createController(opts: {
       audio.setIntensity(1);
       useTris.getState().patch({
         newBest: false,
+        completed: false,
         lastClearLabel: null,
         levelToast: null,
         overlay: null,
@@ -161,7 +168,7 @@ export function createController(opts: {
       bestCrossMs = null;
       syncHud(true);
     }
-    if (e.type === "score") {
+    if (e.type === "score" && engine.mode === "endless") {
       const rec = useTris.getState().records;
       if (e.total > rec.highScore && rec.highScore > 0 && bestCrossMs == null) {
         bestCrossMs = engine.timeMs;
@@ -330,6 +337,8 @@ export function createController(opts: {
 
   function start() {
     audio.unlock();
+    engine.mode = useTris.getState().mode;
+    useTris.getState().patch({ records: loadRecords(engine.mode) });
     engine.start();
     input.enabled = true;
     input.resetDas();
