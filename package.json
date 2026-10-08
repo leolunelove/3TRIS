@@ -6,8 +6,9 @@
   "scripts": {
     "dev": "vite --config vite.pages.config.ts --host 0.0.0.0",
     "build": "vite build --config vite.pages.config.ts",
-    "build:pages": "vite build --config vite.pages.config.ts",
-    "typecheck": "tsc --noEmit"
+    "build:pages": "pnpm test && vite build --config vite.pages.config.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "node game.test.mjs"
   },
   "dependencies": {
     "@fontsource/ibm-plex-mono": "^5.3.0",
