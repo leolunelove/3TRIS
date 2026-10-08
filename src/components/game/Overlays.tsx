@@ -1,3 +1,4 @@
+import { Leaderboard, SubmitScore } from "./Leaderboard";
 import { useEffect, useRef } from "react";
 import type { Controller } from "@/lib/game/controller";
 import { DEFAULT_SETTINGS, ACTION_LABELS, HANDLING_PRESETS, codesLabel, saveSettings } from "@/lib/game/settings";
@@ -81,7 +82,7 @@ export function PlayOverlays({ ctrl }: { ctrl: Controller | null }) {
         </OverlayFrame>
       ) : null}
 
-      {phase === "over" && overlay !== "results" && overlay !== "settings" && overlay !== "help" ? (
+      {phase === "over" && overlay === null ? (
         <OverlayFrame>
           <p className="kicker">{completed ? "Sprint complete" : "Run over"}</p>
           {newBest ? <p className="best-mark">{mode === "sprint" ? "NEW FASTEST TIME" : "NEW PERSONAL BEST"}</p> : <p className="summary-best">{mode === "sprint" ? records.sprintBestMs ? `BEST ${formatSprintTime(records.sprintBestMs)}` : "Finish 40 lines to set a time" : `BEST ${formatScore(records.highScore)}`}</p>}
@@ -104,6 +105,7 @@ export function PlayOverlays({ ctrl }: { ctrl: Controller | null }) {
               <dd>{mode === "sprint" ? formatSprintTime(timeMs) : formatTime(timeMs)}</dd>
             </div>
           </dl>
+          <SubmitScore />
           <p className="hint-row">
             <button type="button" className="text-link" onClick={() => ctrl?.restart()}>
               R — AGAIN
@@ -175,6 +177,7 @@ export function PlayOverlays({ ctrl }: { ctrl: Controller | null }) {
               </ol>
             </div>
           ) : null}
+          <SubmitScore />
           <p className="hint-row">
             <button type="button" className="text-link" onClick={() => ctrl?.restart()}>
               R — AGAIN
@@ -192,6 +195,7 @@ export function PlayOverlays({ ctrl }: { ctrl: Controller | null }) {
 
 export function ChromeOverlays({ ctrl }: { ctrl: Controller | null }) {
   const overlay = useTris((s) => s.overlay);
+  if (overlay === "leaderboard") return <Leaderboard />;
   if (overlay === "help") return <HelpOverlay />;
   if (overlay === "settings") return <SettingsOverlay ctrl={ctrl} />;
   return null;

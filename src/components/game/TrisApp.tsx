@@ -51,6 +51,7 @@ export function TrisApp() {
         <span className="edition-label">{mode === "sprint" ? "40 LINES / SPRINT" : "ENDLESS / SURVIVAL"}</span>
         <nav className="top-nav" aria-label="Game controls">
           {phase === "playing" || phase === "paused" ? <button type="button" className="text-link pause-link" onClick={() => phase === "playing" ? ctrl?.pause() : ctrl?.resume()}>{phase === "playing" ? "Pause" : "Resume"}</button> : null}
+          <button type="button" className="text-link leaderboard-link" onClick={() => useTris.getState().setOverlay("leaderboard")}>Top 10</button>
           <button type="button" className="text-link" onClick={() => useTris.getState().setOverlay(overlay === "help" ? null : "help")}>
             How to play
           </button>
