@@ -11,7 +11,7 @@ export type GameMode = "endless" | "sprint";
 
 export type Phase = "ready" | "playing" | "paused" | "over";
 
-export type Overlay = "settings" | "help" | "results" | null;
+export type Overlay = "settings" | "help" | "results" | "leaderboard" | null;
 
 export type Action =
   | "left"

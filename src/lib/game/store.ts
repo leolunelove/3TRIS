@@ -6,6 +6,10 @@ import type { GameMode, Overlay, Phase, PieceId, Records, RunRecord, Settings } 
 export type SettingsTab = "controls" | "video" | "audio" | "game";
 
 export type HudState = {
+  lastRun: RunRecord | null;
+  rankedRunId: string | null;
+  rankedState: "pending" | "ready" | "offline";
+  submittedRunId: string | null;
   phase: Phase;
   mode: GameMode;
   completed: boolean;
@@ -44,6 +48,10 @@ const bootRecords = typeof window === "undefined" ? EMPTY_RECORDS : loadRecords(
 const bootHistory = typeof window === "undefined" ? [] : loadHistory();
 
 export const useTris = create<HudState & Actions>((set, get) => ({
+  lastRun: null,
+  rankedRunId: null,
+  rankedState: "offline",
+  submittedRunId: null,
   phase: "ready",
   mode: "endless",
   completed: false,

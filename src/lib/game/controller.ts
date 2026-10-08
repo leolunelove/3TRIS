@@ -25,6 +25,8 @@ export type Controller = {
   audio: GameAudio;
 };
 
+import { beginLeaderboardRun, newRunId } from "./leaderboard";
+
 export function createController(opts: {
   canvas: HTMLCanvasElement;
   stage: HTMLElement;
@@ -138,6 +140,7 @@ export function createController(opts: {
       });
       useTris.getState().patch({
         phase: "over",
+        lastRun: history[0],
         records,
         history,
         pieces,
@@ -151,6 +154,13 @@ export function createController(opts: {
       syncHud(true);
     }
     if (e.type === "start") {
+      const runId = newRunId();
+      useTris.getState().patch({ rankedRunId: runId, rankedState: "pending", lastRun: null, submittedRunId: null });
+      beginLeaderboardRun(runId, engine.mode).then(() => {
+        if (running && useTris.getState().rankedRunId === runId) useTris.getState().patch({ rankedState: "ready" });
+      }).catch(() => {
+        if (running && useTris.getState().rankedRunId === runId) useTris.getState().patch({ rankedState: "offline" });
+      });
       audio.unlock();
       audio.startMusic();
       audio.setIntensity(1);
@@ -270,7 +280,7 @@ export function createController(opts: {
       return;
     }
 
-    if (overlay === "help" || overlay === "settings") {
+    if (overlay === "help" || overlay === "settings" || overlay === "leaderboard") {
       if (action === "pause" || e.code === "Escape") {
         e.preventDefault();
         useTris.getState().setOverlay(null);
