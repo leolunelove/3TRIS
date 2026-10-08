@@ -1,7 +1,8 @@
 import { useEffect, useRef } from "react";
 import type { Controller } from "@/lib/game/controller";
 import { DEFAULT_SETTINGS, ACTION_LABELS, HANDLING_PRESETS, codesLabel, saveSettings } from "@/lib/game/settings";
-import { formatScore, formatTime, useTris, type SettingsTab } from "@/lib/game/store";
+import { formatScore, formatTime, formatSprintTime, useTris, type SettingsTab } from "@/lib/game/store";
+import { loadRecords } from "@/lib/game/records";
 import type { Action, Settings } from "@/lib/game/types";
 
 function OverlayFrame({ children }: { children: React.ReactNode }) {
@@ -14,6 +15,9 @@ function OverlayFrame({ children }: { children: React.ReactNode }) {
 
 export function PlayOverlays({ ctrl }: { ctrl: Controller | null }) {
   const phase = useTris((s) => s.phase);
+  const mode = useTris((s) => s.mode);
+  const completed = useTris((s) => s.completed);
+  const clearSerial = useTris((s) => s.clearSerial);
   const overlay = useTris((s) => s.overlay);
   const score = useTris((s) => s.score);
   const lines = useTris((s) => s.lines);
@@ -31,7 +35,7 @@ export function PlayOverlays({ ctrl }: { ctrl: Controller | null }) {
   return (
     <>
       {lastClearLabel && phase === "playing" ? (
-        <div className="float-tag float-clear" aria-hidden>
+        <div key={clearSerial} className="float-tag float-clear" role="status">
           {lastClearLabel}
         </div>
       ) : null}
@@ -45,7 +49,11 @@ export function PlayOverlays({ ctrl }: { ctrl: Controller | null }) {
         <div className="ready-hint">
           <p className="ready-eyebrow">ONE MORE RUN.</p>
           <h2 className="ready-title">Find your<br />flow.</h2>
-          <p className="ready-copy">Stack. Clear. Keep going.</p>
+          <p className="ready-copy">{mode === "sprint" ? "40 lines. Your fastest time." : "Stack. Clear. Keep going."}</p>
+          <div className="mode-picker" aria-label="Game mode">
+            {(["endless", "sprint"] as const).map((m) => <button key={m} type="button" aria-pressed={mode === m} onClick={() => useTris.getState().patch({ mode: m, records: loadRecords(m) })}>{m === "endless" ? "Endless" : "40-line sprint"}</button>)}
+          </div>
+          <p className="ready-record">{mode === "sprint" ? records.sprintBestMs ? `BEST ${formatSprintTime(records.sprintBestMs)}` : "SET YOUR FIRST TIME" : records.highScore ? `BEST ${formatScore(records.highScore)}` : "SET YOUR FIRST BEST"}</p>
           <button type="button" className="start-cta" disabled={!ctrl} onClick={(e) => { ctrl?.start(); e.currentTarget.blur(); }}>
             Start playing <span aria-hidden="true">↗</span>
           </button>
@@ -75,8 +83,8 @@ export function PlayOverlays({ ctrl }: { ctrl: Controller | null }) {
 
       {phase === "over" && overlay !== "results" && overlay !== "settings" && overlay !== "help" ? (
         <OverlayFrame>
-          <p className="kicker">Run over</p>
-          {newBest ? <p className="best-mark">NEW BEST</p> : null}
+          <p className="kicker">{completed ? "Sprint complete" : "Run over"}</p>
+          {newBest ? <p className="best-mark">{mode === "sprint" ? "NEW FASTEST TIME" : "NEW PERSONAL BEST"}</p> : <p className="summary-best">{mode === "sprint" ? records.sprintBestMs ? `BEST ${formatSprintTime(records.sprintBestMs)}` : "Finish 40 lines to set a time" : `BEST ${formatScore(records.highScore)}`}</p>}
           {deathReason ? <p className="help-copy">{deathReason}. Outlined cells closed the well.</p> : null}
           <dl className="result-grid">
             <div>
@@ -93,7 +101,7 @@ export function PlayOverlays({ ctrl }: { ctrl: Controller | null }) {
             </div>
             <div>
               <dt>Time</dt>
-              <dd>{formatTime(timeMs)}</dd>
+              <dd>{mode === "sprint" ? formatSprintTime(timeMs) : formatTime(timeMs)}</dd>
             </div>
           </dl>
           <p className="hint-row">
@@ -104,6 +112,7 @@ export function PlayOverlays({ ctrl }: { ctrl: Controller | null }) {
               ENTER — RESULTS
             </button>
           </p>
+          <button type="button" className="text-link mode-menu" onClick={() => ctrl?.quit()}>Change mode</button>
         </OverlayFrame>
       ) : null}
 
@@ -136,8 +145,8 @@ export function PlayOverlays({ ctrl }: { ctrl: Controller | null }) {
               </tr>
               <tr>
                 <th>Time</th>
-                <td>{formatTime(timeMs)}</td>
-                <td>{formatTime(records.longestMs)}</td>
+                <td>{mode === "sprint" ? formatSprintTime(timeMs) : formatTime(timeMs)}</td>
+                <td>{mode === "sprint" ? records.sprintBestMs ? formatSprintTime(records.sprintBestMs) : "—" : formatTime(records.longestMs)}</td>
               </tr>
               <tr>
                 <th>Pieces</th>
@@ -155,7 +164,7 @@ export function PlayOverlays({ ctrl }: { ctrl: Controller | null }) {
             <div className="history-block">
               <p className="slot-label">Recent</p>
               <ol className="history-list">
-                {history.slice(0, 8).map((run) => (
+                {history.filter((r) => (r.mode ?? "endless") === mode).slice(0, 5).map((run) => (
                   <li key={run.at}>
                     <span>{formatScore(run.score)}</span>
                     <span>L{String(run.level).padStart(2, "0")}</span>
@@ -174,6 +183,7 @@ export function PlayOverlays({ ctrl }: { ctrl: Controller | null }) {
               ESC — CLOSE
             </button>
           </p>
+          <button type="button" className="text-link mode-menu" onClick={() => ctrl?.quit()}>Change mode</button>
         </OverlayFrame>
       ) : null}
     </>
@@ -193,7 +203,7 @@ function HelpOverlay() {
       <div className="overlay-panel">
         <p className="kicker">How to play</p>
         <p className="help-lead">Place blocks. Clear lines. Don’t die.</p>
-        <p className="help-copy">Survive as long as you can. Gravity rises until the stack does not forgive.</p>
+        <p className="help-copy">Endless: survive as gravity rises. Sprint: clear 40 lines at a steady speed, as fast as you can. Bests are saved on this device.</p>
         <dl className="help-keys">
           <div>
             <dt>Move</dt>
@@ -499,9 +509,11 @@ function Toggle({ label, on, onChange }: { label: string; on: boolean; onChange:
 
 export function TouchBar({ ctrl }: { ctrl: Controller | null }) {
   const phase = useTris((s) => s.phase);
-  if (phase === "ready") return null;
+  const overlay = useTris((s) => s.overlay);
+  if (phase === "ready" || phase === "over") return null;
   const down = (action: Action) => (e: React.PointerEvent) => {
     e.preventDefault();
+    if (phase !== "playing" || overlay) return;
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     const code = ctrl?.input.settings.bindings[action][0];
     if (code) ctrl?.input.onKeyDown(code);
@@ -512,32 +524,32 @@ export function TouchBar({ ctrl }: { ctrl: Controller | null }) {
     if (code) ctrl?.input.onKeyUp(code);
   };
   return (
-    <div className="touch-bar" onContextMenu={(e) => e.preventDefault()}>
+    <fieldset disabled={phase !== "playing" || !!overlay} className="touch-bar" aria-label="Touch controls" onContextMenu={(e) => e.preventDefault()}>
       <button type="button" className="touch-btn" onPointerDown={down("hold")} onPointerUp={up("hold")} onPointerCancel={up("hold")}>
         HOLD
       </button>
-      <button type="button" className="touch-btn" onPointerDown={down("left")} onPointerUp={up("left")} onPointerCancel={up("left")}>
+      <button type="button" className="touch-btn" aria-label="Move left" onPointerDown={down("left")} onPointerUp={up("left")} onPointerCancel={up("left")}>
         ←
       </button>
-      <button type="button" className="touch-btn" onPointerDown={down("right")} onPointerUp={up("right")} onPointerCancel={up("right")}>
+      <button type="button" className="touch-btn" aria-label="Move right" onPointerDown={down("right")} onPointerUp={up("right")} onPointerCancel={up("right")}>
         →
       </button>
-      <button type="button" className="touch-btn" onPointerDown={down("rot180")} onPointerUp={up("rot180")} onPointerCancel={up("rot180")}>
+      <button type="button" className="touch-btn" aria-label="Rotate 180 degrees" onPointerDown={down("rot180")} onPointerUp={up("rot180")} onPointerCancel={up("rot180")}>
         180
       </button>
-      <button type="button" className="touch-btn" onPointerDown={down("rotCCW")} onPointerUp={up("rotCCW")} onPointerCancel={up("rotCCW")}>
+      <button type="button" className="touch-btn" aria-label="Rotate counterclockwise" onPointerDown={down("rotCCW")} onPointerUp={up("rotCCW")} onPointerCancel={up("rotCCW")}>
         CCW
       </button>
-      <button type="button" className="touch-btn" onPointerDown={down("rotCW")} onPointerUp={up("rotCW")} onPointerCancel={up("rotCW")}>
+      <button type="button" className="touch-btn" aria-label="Rotate clockwise" onPointerDown={down("rotCW")} onPointerUp={up("rotCW")} onPointerCancel={up("rotCW")}>
         CW
       </button>
-      <button type="button" className="touch-btn" onPointerDown={down("soft")} onPointerUp={up("soft")} onPointerCancel={up("soft")}>
+      <button type="button" className="touch-btn" aria-label="Soft drop" onPointerDown={down("soft")} onPointerUp={up("soft")} onPointerCancel={up("soft")}>
         ↓
       </button>
       <button type="button" className="touch-btn hard" onPointerDown={down("hard")} onPointerUp={up("hard")} onPointerCancel={up("hard")}>
         DROP
       </button>
-    </div>
+    </fieldset>
   );
 }
 

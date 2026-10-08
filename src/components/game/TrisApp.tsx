@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createController, type Controller } from "@/lib/game/controller";
-import { formatScore, formatTime, useTris } from "@/lib/game/store";
+import { formatScore, formatTime, formatSprintTime, useTris } from "@/lib/game/store";
 import { MiniPiece } from "./MiniPiece";
 import { ChromeOverlays, PlayOverlays, PrefersReducedSync, TouchBar } from "./Overlays";
 
@@ -9,6 +9,7 @@ export function TrisApp() {
   const stageRef = useRef<HTMLDivElement>(null);
   const [ctrl, setCtrl] = useState<Controller | null>(null);
 
+  const mode = useTris((s) => s.mode);
   const phase = useTris((s) => s.phase);
   const score = useTris((s) => s.score);
   const lines = useTris((s) => s.lines);
@@ -47,7 +48,7 @@ export function TrisApp() {
           <span className="wordmark-3">3</span>
           <span>TRIS</span>
         </h1>
-        <span className="edition-label">ENDLESS / SURVIVAL</span>
+        <span className="edition-label">{mode === "sprint" ? "40 LINES / SPRINT" : "ENDLESS / SURVIVAL"}</span>
         <nav className="top-nav" aria-label="Game controls">
           {phase === "playing" || phase === "paused" ? <button type="button" className="text-link pause-link" onClick={() => phase === "playing" ? ctrl?.pause() : ctrl?.resume()}>{phase === "playing" ? "Pause" : "Resume"}</button> : null}
           <button type="button" className="text-link" onClick={() => useTris.getState().setOverlay(overlay === "help" ? null : "help")}>
@@ -73,7 +74,7 @@ export function TrisApp() {
               {newBest && phase !== "ready" ? <span className="best-inline">NEW BEST</span> : null}
             </p>
             <p className="stat-num stat-score">{formatScore(score)}</p>
-            {records.highScore > 0 ? <p className="stat-sub">BEST {formatScore(records.highScore)}</p> : null}
+            {mode === "sprint" ? <p className="stat-sub">BEST {records.sprintBestMs ? formatSprintTime(records.sprintBestMs) : "—"}</p> : records.highScore > 0 ? <p className="stat-sub">BEST {formatScore(records.highScore)}</p> : null}
           </section>
           <div className="stat-row">
             <section>
@@ -82,7 +83,7 @@ export function TrisApp() {
             </section>
             <section>
               <p className="slot-label">Lines</p>
-              <p className="stat-num">{String(lines).padStart(3, "0")}</p>
+              <p className="stat-num">{mode === "sprint" ? `${Math.min(lines, 40)}/40` : String(lines).padStart(3, "0")}</p>
             </section>
           </div>
           <div className="stat-row">
@@ -101,6 +102,7 @@ export function TrisApp() {
         <div className="well-wrap" ref={stageRef}>
           <div className="well">
             <canvas ref={canvasRef} className="playfield" aria-label="3TRIS game board. Use arrow keys to move, Z and X to rotate, and Space to drop." />
+            {mode === "sprint" && phase !== "ready" ? <div className="sprint-progress" role="progressbar" aria-label="Sprint lines cleared" aria-valuenow={Math.min(lines, 40)} aria-valuemin={0} aria-valuemax={40}><span style={{ width: `${Math.min(lines / 40, 1) * 100}%` }} /></div> : null}
             <PlayOverlays ctrl={ctrl} />
           </div>
         </div>
@@ -135,7 +137,7 @@ export function TrisApp() {
         </section>
         <section>
           <p className="slot-label">Lines</p>
-          <p className="stat-num">{String(lines).padStart(3, "0")}</p>
+          <p className="stat-num">{mode === "sprint" ? `${Math.min(lines, 40)}/40` : String(lines).padStart(3, "0")}</p>
         </section>
         <section>
           <p className="slot-label">Time</p>
