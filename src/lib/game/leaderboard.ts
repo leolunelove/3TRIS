@@ -19,8 +19,19 @@ export function playerToken(): string {
   }
   return memoryToken;
 }
+let memoryNickname = "";
 export function savedNickname(): string {
-  try { return localStorage.getItem("3tris-nickname-v1") ?? ""; } catch { return ""; }
+  try {
+    const saved = localStorage.getItem("3tris-nickname-v1")?.trim() ?? "";
+    if (/^[A-Za-z0-9 _-]{2,16}$/.test(saved)) memoryNickname = saved;
+  } catch { /* use this session's name when storage is unavailable */ }
+  return memoryNickname;
+}
+export function rememberNickname(nickname: string): void {
+  const name = nickname.trim();
+  if (!/^[A-Za-z0-9 _-]{2,16}$/.test(name)) return;
+  memoryNickname = name;
+  try { localStorage.setItem("3tris-nickname-v1", name); } catch { /* session only */ }
 }
 async function request<T>(path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
   if (!LEADERBOARD_URL) throw new Error("Leaderboard is not connected yet.");
@@ -41,10 +52,10 @@ export function beginLeaderboardRun(runId: string, mode: GameMode) {
   return request<{ ok: boolean }>("", { action: "start", runId, mode, playerToken: playerToken() });
 }
 export async function postLeaderboardRun(runId: string, run: RunRecord, nickname: string) {
+  rememberNickname(nickname);
   const result = await request<{ rank: number | null; improved: boolean }>("", {
     action: "submit", runId, playerToken: playerToken(), nickname: nickname.trim(),
     score: run.score, lines: run.lines, level: run.level, timeMs: Math.round(run.timeMs), pieces: run.pieces, completed: !!run.completed,
   });
-  try { localStorage.setItem("3tris-nickname-v1", nickname.trim()); } catch { /* optional preference */ }
   return result;
 }
