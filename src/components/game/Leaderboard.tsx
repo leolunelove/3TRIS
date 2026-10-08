@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { getLeaderboard, postLeaderboardRun, savedNickname, type LeaderboardEntry } from "@/lib/game/leaderboard";
+import { getLeaderboard, postLeaderboardRun, rememberNickname, savedNickname, type LeaderboardEntry } from "@/lib/game/leaderboard";
 import { formatScore, formatSprintTime, useTris } from "@/lib/game/store";
 import type { GameMode } from "@/lib/game/types";
 
@@ -51,6 +51,7 @@ export function SubmitScore() {
   const runId = useTris(s => s.rankedRunId);
   const session = useTris(s => s.rankedState);
   const [nickname, setNickname] = useState(savedNickname);
+  const [editingName, setEditingName] = useState(() => !savedNickname());
   const [status, setStatus] = useState<"idle" | "sending" | "done" | "error">("idle");
   const [message, setMessage] = useState("");
   const submitted = useTris(s => s.submittedRunId);
@@ -69,8 +70,11 @@ export function SubmitScore() {
       } catch (error) { setStatus("error"); setMessage(error instanceof Error ? error.message : "Couldn’t post. Please try again."); }
       finally { locked.current = false; }
     }}>
-      <label htmlFor="leaderboard-name">Your leaderboard name</label>
-      <input id="leaderboard-name" value={nickname} onChange={e => setNickname(e.target.value)} minLength={2} maxLength={16} pattern={"[A-Za-z0-9 _\\-]{2,16}"} title="2–16 letters, numbers, spaces, underscores or hyphens" placeholder="Player name" autoComplete="nickname" required disabled={status === "sending"} />
+      {editingName ? <>
+        <label htmlFor="leaderboard-name">Your leaderboard name</label>
+        <input id="leaderboard-name" value={nickname} onChange={e => { setNickname(e.target.value); rememberNickname(e.target.value); }} minLength={2} maxLength={16} pattern={"[A-Za-z0-9 _\\-]{2,16}"} title="2–16 letters, numbers, spaces, underscores or hyphens" placeholder="Player name" autoComplete="nickname" required disabled={status === "sending"} />
+        <p className="submission-message">We’ll remember your name on this device.</p>
+      </> : <p className="submission-message">Playing as <strong>{nickname}</strong> · <button type="button" className="text-link" disabled={status === "sending"} onClick={() => setEditingName(true)}>Change name</button></p>}
       <button className="menu-btn primary" type="submit" disabled={session !== "ready" || status === "sending"}>{status === "sending" ? "Posting…" : session === "pending" ? "Connecting…" : run.mode === "sprint" ? "Post time" : "Post score"}</button>
       <p className="submission-message" role="status">{message || "Your name and result will be public."}</p>
     </form>}
