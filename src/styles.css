@@ -40,9 +40,9 @@
     overflow: hidden;
   }
 
-  #app,
-  body > div {
-    min-height: 100%;
+  #app {
+    height: 100%;
+    overflow: hidden;
   }
 
   * {
