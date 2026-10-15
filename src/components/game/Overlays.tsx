@@ -199,9 +199,26 @@ export function PlayOverlays({ ctrl }: { ctrl: Controller | null }) {
 export function ChromeOverlays({ ctrl }: { ctrl: Controller | null }) {
   const overlay = useTris((s) => s.overlay);
   if (overlay === "leaderboard") return <Leaderboard />;
+  if (overlay === "updates") return <UpdatesOverlay />;
   if (overlay === "help") return <HelpOverlay />;
   if (overlay === "settings") return <SettingsOverlay ctrl={ctrl} />;
   return null;
+}
+
+const UPDATE_LOG = [
+  { date: "2026-10-15", label: "October 15, 2026", title: "A fresh start as FallingBlocks", changes: ["Refreshed FallingBlocks branding, modern typography, and calmer navigation.", "A cleaner results screen, with your score up front and a clear way to play again.", "Finished runs post automatically when your player name is remembered.", "Our new home: fallingblocks.vip."] },
+  { date: "2026-10-08", label: "October 8, 2026", title: "More ways to chase a best", changes: ["Worldwide top 10 for Endless scores and 40-line Sprint times.", "Personal bests and recent runs saved on your device.", "Touch controls for mobile, plus clearer line-clear feedback."] },
+];
+
+function UpdatesOverlay() {
+  return <EndRunFrame>
+    <header className="end-run-header"><p className="end-run-mode">FallingBlocks / Changelog</p><h2 id="end-run-title">What’s new<span>?</span></h2></header>
+    <ol className="update-log">{UPDATE_LOG.map(entry => <li key={entry.date}>
+      <time dateTime={entry.date}>{entry.label}</time><h3>{entry.title}</h3>
+      <ul>{entry.changes.map(change => <li key={change}>{change}</li>)}</ul>
+    </li>)}</ol>
+    <button type="button" className="end-run-primary" onClick={() => useTris.getState().setOverlay(null)}>Back to game <span aria-hidden="true">↗</span></button>
+  </EndRunFrame>;
 }
 
 function HelpOverlay() {

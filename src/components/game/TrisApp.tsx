@@ -45,12 +45,13 @@ export function TrisApp() {
       <div className="bezel" />
       <header className="tris-top">
         <h1 className="wordmark" aria-label="FallingBlocks">
-          <span>Falling</span><span className="wordmark-blocks">Blocks</span>
+          <svg className="brand-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="2" width="8" height="8" rx="2"/><rect x="14" y="6" width="8" height="8" rx="2"/><rect x="2" y="14" width="8" height="8" rx="2"/></svg><span>Falling<span className="wordmark-blocks">Blocks</span></span>
         </h1>
         <span className="edition-label">{mode === "sprint" ? "40 LINES / SPRINT" : "ENDLESS / SURVIVAL"}</span>
         <nav className="top-nav" aria-label="Game controls">
           {phase === "playing" || phase === "paused" ? <button type="button" className="text-link pause-link" onClick={() => phase === "playing" ? ctrl?.pause() : ctrl?.resume()}>{phase === "playing" ? "Pause" : "Resume"}</button> : null}
           <button type="button" className="text-link leaderboard-link" onClick={() => useTris.getState().setOverlay("leaderboard")}>Top 10</button>
+          <button type="button" className="text-link updates-link" onClick={() => useTris.getState().setOverlay("updates")}>Updates</button>
           <button type="button" className="text-link" onClick={() => useTris.getState().setOverlay(overlay === "help" ? null : "help")}>
             How to play
           </button>
