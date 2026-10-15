@@ -1084,3 +1084,9 @@ kbd { font: 9px var(--font-mono); color: #c3cec8; min-width: 44px; }
 .end-run-card button:focus-visible { outline: 2px solid #b5eccb; outline-offset: 4px; }
 @media (max-width: 480px) { .end-run-backdrop { padding: 16px; } .end-run-card { padding: 24px; max-height: calc(100dvh - 32px); border-radius: 16px; } .end-run-value { font-size: 56px; } .end-run-header { margin-bottom: 22px; } }
 @media (max-height: 640px) { .end-run-card { padding: 22px; } .end-run-header, .end-run-hero { margin-bottom: 16px; } .end-run-value { font-size: 48px; } .end-run-stats { padding: 12px 0; } .end-run-card .submit-score { padding: 14px 0; } }
+
+/* FallingBlocks wordmark */
+.wordmark { font-size: 22px; letter-spacing: -.045em; white-space: nowrap; }
+.wordmark-blocks { color: var(--color-accent); }
+@media (max-width: 640px) { .wordmark { font-size: 18px; letter-spacing: -.05em; } }
+@media (max-width: 360px) { .wordmark { font-size: 16px; } .top-nav { gap: 7px; } }
