@@ -1,6 +1,6 @@
-# 3TRIS
+# FallingBlocks
 
-[Play 3TRIS](https://leolunelove.github.io/3TRIS/)
+[Play FallingBlocks](https://fallingblocks.vip/)
 
 A falling block game with Endless survival and a 40-line Sprint. Runs entirely in the browser; settings and records are stored locally on your device.
 

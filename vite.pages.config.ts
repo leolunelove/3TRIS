@@ -3,7 +3,7 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
-  base: process.env.GITHUB_PAGES_BASE || "/3TRIS/",
+  base: process.env.GITHUB_PAGES_BASE || "/",
   resolve: { tsconfigPaths: true },
   plugins: [tailwindcss(), react()],
   build: { outDir: "dist-pages" },
