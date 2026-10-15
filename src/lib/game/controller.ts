@@ -26,6 +26,7 @@ export type Controller = {
 };
 
 import { beginLeaderboardRun, newRunId } from "./leaderboard";
+import { autoSubmitScore } from "./submissions";
 
 export function createController(opts: {
   canvas: HTMLCanvasElement;
@@ -48,6 +49,7 @@ export function createController(opts: {
   let bestPulse = 0;
   let lastBestScore = useTris.getState().records.highScore;
   let bestCrossMs: number | null = null;
+  let rankedTicket: Promise<unknown> = Promise.resolve();
 
   const syncHud = (force = false) => {
     const snap = engine.snapshot();
@@ -150,13 +152,15 @@ export function createController(opts: {
         newBest: engine.mode === "sprint" ? flags.sprint : flags.score && engine.score > 0,
         overlay: null,
       });
+      autoSubmitScore(useTris.getState().rankedRunId, history[0], rankedTicket);
       if (engine.mode === "sprint" ? flags.sprint : flags.score) audio.newBest();
       syncHud(true);
     }
     if (e.type === "start") {
       const runId = newRunId();
-      useTris.getState().patch({ rankedRunId: runId, rankedState: "pending", lastRun: null, submittedRunId: null });
-      beginLeaderboardRun(runId, engine.mode).then(() => {
+      useTris.getState().patch({ rankedRunId: runId, rankedState: "pending", lastRun: null, submittedRunId: null, submissionStatus: "idle", submissionMessage: "" });
+      rankedTicket = beginLeaderboardRun(runId, engine.mode);
+      rankedTicket.then(() => {
         if (running && useTris.getState().rankedRunId === runId) useTris.getState().patch({ rankedState: "ready" });
       }).catch(() => {
         if (running && useTris.getState().rankedRunId === runId) useTris.getState().patch({ rankedState: "offline" });

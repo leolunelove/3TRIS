@@ -10,6 +10,8 @@ export type HudState = {
   rankedRunId: string | null;
   rankedState: "pending" | "ready" | "offline";
   submittedRunId: string | null;
+  submissionStatus: "idle" | "sending" | "done" | "error";
+  submissionMessage: string;
   phase: Phase;
   mode: GameMode;
   completed: boolean;
@@ -52,6 +54,8 @@ export const useTris = create<HudState & Actions>((set, get) => ({
   rankedRunId: null,
   rankedState: "offline",
   submittedRunId: null,
+  submissionStatus: "idle",
+  submissionMessage: "",
   phase: "ready",
   mode: "endless",
   completed: false,
