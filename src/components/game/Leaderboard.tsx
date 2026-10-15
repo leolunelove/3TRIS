@@ -69,7 +69,7 @@ export function SubmitScore() {
         <p className="submission-message">Your name is remembered here. Future runs post automatically.</p>
       </> : <p className="submission-message">Playing as <strong>{nickname}</strong> · <button type="button" className="text-link" disabled={status === "sending"} onClick={() => setEditingName(true)}>Change name</button></p>}
       {done ? <p className="submission-message" role="status">{message || "Your result has been posted."}</p> : session === "offline" ? <p className="submission-message" role="status">This run couldn’t connect to the leaderboard. Your local record is saved.</p> : <>
-        <button className="menu-btn primary" type="submit" disabled={session !== "ready" || status === "sending"}>{status === "sending" ? "Posting…" : session === "pending" ? "Connecting…" : status === "error" ? "Try again" : run.mode === "sprint" ? "Post time" : "Post score"}</button>
+        {status !== "sending" ? <button className="menu-btn primary" type="submit" disabled={session !== "ready"}>{session === "pending" ? "Connecting…" : status === "error" ? "Try again" : run.mode === "sprint" ? "Post time" : "Post score"}</button> : null}
         <p className="submission-message" role="status">{message || "Your name and result will be public."}</p>
       </>}
     </form>

@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { Leaderboard, SubmitScore } from "./Leaderboard";
 import { useEffect, useRef } from "react";
 import type { Controller } from "@/lib/game/controller";
@@ -14,6 +15,25 @@ function OverlayFrame({ children }: { children: React.ReactNode }) {
   );
 }
 
+function EndRunFrame({ children }: { children: React.ReactNode }) {
+  const panel = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const previous = document.activeElement as HTMLElement | null;
+    panel.current?.focus();
+    return () => { if (previous?.isConnected) previous.focus(); };
+  }, []);
+  return createPortal(<div className="end-run-backdrop">
+    <div className="end-run-card" role="dialog" aria-modal="true" aria-labelledby="end-run-title" tabIndex={-1} ref={panel} onKeyDown={e => {
+      if (e.key !== "Tab") return;
+      const controls = panel.current?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled)');
+      if (!controls?.length) return;
+      const first = controls[0], last = controls[controls.length - 1];
+      if (e.shiftKey && (document.activeElement === first || document.activeElement === panel.current)) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && (document.activeElement === last || document.activeElement === panel.current)) { e.preventDefault(); first.focus(); }
+    }}>{children}</div>
+  </div>, document.body);
+}
+
 export function PlayOverlays({ ctrl }: { ctrl: Controller | null }) {
   const phase = useTris((s) => s.phase);
   const mode = useTris((s) => s.mode);
@@ -28,7 +48,6 @@ export function PlayOverlays({ ctrl }: { ctrl: Controller | null }) {
   const records = useTris((s) => s.records);
   const lastClearLabel = useTris((s) => s.lastClearLabel);
   const levelToast = useTris((s) => s.levelToast);
-  const deathReason = useTris((s) => s.deathReason);
   const pieces = useTris((s) => s.pieces);
   const bestCrossMs = useTris((s) => s.bestCrossMs);
   const history = useTris((s) => s.history);
@@ -83,44 +102,33 @@ export function PlayOverlays({ ctrl }: { ctrl: Controller | null }) {
       ) : null}
 
       {phase === "over" && overlay === null ? (
-        <OverlayFrame>
-          <p className="kicker">{completed ? "Sprint complete" : "Run over"}</p>
-          {newBest ? <p className="best-mark">{mode === "sprint" ? "NEW FASTEST TIME" : "NEW PERSONAL BEST"}</p> : <p className="summary-best">{mode === "sprint" ? records.sprintBestMs ? `BEST ${formatSprintTime(records.sprintBestMs)}` : "Finish 40 lines to set a time" : `BEST ${formatScore(records.highScore)}`}</p>}
-          {deathReason ? <p className="help-copy">{deathReason}. Outlined cells closed the well.</p> : null}
-          <dl className="result-grid">
-            <div>
-              <dt>Score</dt>
-              <dd>{formatScore(score)}</dd>
-            </div>
-            <div>
-              <dt>Lines</dt>
-              <dd>{lines}</dd>
-            </div>
-            <div>
-              <dt>Level</dt>
-              <dd>{String(level).padStart(2, "0")}</dd>
-            </div>
-            <div>
-              <dt>Time</dt>
-              <dd>{mode === "sprint" ? formatSprintTime(timeMs) : formatTime(timeMs)}</dd>
-            </div>
+        <EndRunFrame>
+          <header className="end-run-header">
+            <p className="end-run-mode">{mode === "sprint" ? "40-line sprint" : "Endless survival"}</p>
+            <h2 id="end-run-title">{completed ? "Sprint complete" : "Run over"}<span>.</span></h2>
+          </header>
+          <div className="end-run-hero">
+            <p className="end-run-label">{completed ? "Finish time" : "Final score"}</p>
+            <p className="end-run-value">{completed ? formatSprintTime(timeMs) : score.toLocaleString("en-US")}</p>
+            <p className={`end-run-best${newBest ? " is-new" : ""}`}>{newBest ? mode === "sprint" ? "New fastest time" : "New personal best" : mode === "sprint" ? records.sprintBestMs ? `Personal best ${formatSprintTime(records.sprintBestMs)}` : "Clear 40 lines to finish" : `Personal best ${records.highScore.toLocaleString("en-US")}`}</p>
+          </div>
+          <dl className="end-run-stats">
+            <div><dt>Lines</dt><dd>{mode === "sprint" ? `${Math.min(lines, 40)} / 40` : lines}</dd></div>
+            <div><dt>{completed ? "Score" : "Level"}</dt><dd>{completed ? score.toLocaleString("en-US") : level}</dd></div>
+            <div><dt>{completed ? "Pieces" : "Time"}</dt><dd>{completed ? pieces : formatTime(timeMs)}</dd></div>
           </dl>
           <SubmitScore />
-          <p className="hint-row">
-            <button type="button" className="text-link" onClick={() => ctrl?.restart()}>
-              R — AGAIN
-            </button>
-            <button type="button" className="text-link" onClick={() => useTris.getState().setOverlay("results")}>
-              ENTER — RESULTS
-            </button>
-          </p>
-          <button type="button" className="text-link mode-menu" onClick={() => ctrl?.quit()}>Change mode</button>
-        </OverlayFrame>
+          <button type="button" className="end-run-primary" onClick={() => ctrl?.restart()}>Play again <kbd>R</kbd></button>
+          <div className="end-run-secondary">
+            <button type="button" onClick={() => useTris.getState().setOverlay("results")}>Run details</button>
+            <button type="button" onClick={() => ctrl?.quit()}>Change mode</button>
+          </div>
+        </EndRunFrame>
       ) : null}
 
       {overlay === "results" ? (
-        <OverlayFrame>
-          <p className="kicker">Results</p>
+        <EndRunFrame>
+          <header className="end-run-header"><p className="end-run-mode">Your last run</p><h2 id="end-run-title">Run details<span>.</span></h2></header>
           <table className="records-table">
             <thead>
               <tr>
@@ -177,17 +185,12 @@ export function PlayOverlays({ ctrl }: { ctrl: Controller | null }) {
               </ol>
             </div>
           ) : null}
-          <SubmitScore />
-          <p className="hint-row">
-            <button type="button" className="text-link" onClick={() => ctrl?.restart()}>
-              R — AGAIN
-            </button>
-            <button type="button" className="text-link" onClick={() => useTris.getState().setOverlay(null)}>
-              ESC — CLOSE
-            </button>
-          </p>
-          <button type="button" className="text-link mode-menu" onClick={() => ctrl?.quit()}>Change mode</button>
-        </OverlayFrame>
+          <button type="button" className="end-run-primary" onClick={() => ctrl?.restart()}>Play again <kbd>R</kbd></button>
+          <div className="end-run-secondary">
+            <button type="button" onClick={() => useTris.getState().setOverlay(null)}>Back to summary</button>
+            <button type="button" onClick={() => ctrl?.quit()}>Change mode</button>
+          </div>
+        </EndRunFrame>
       ) : null}
     </>
   );
