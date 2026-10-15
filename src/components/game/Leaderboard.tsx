@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { getLeaderboard, postLeaderboardRun, rememberNickname, savedNickname, type LeaderboardEntry } from "@/lib/game/leaderboard";
+import { getLeaderboard, rememberNickname, savedNickname, type LeaderboardEntry } from "@/lib/game/leaderboard";
 import { formatScore, formatSprintTime, useTris } from "@/lib/game/store";
+import { eligibleForLeaderboard, submitScore } from "@/lib/game/submissions";
 import type { GameMode } from "@/lib/game/types";
 
 export function Leaderboard() {
@@ -52,32 +53,26 @@ export function SubmitScore() {
   const session = useTris(s => s.rankedState);
   const [nickname, setNickname] = useState(savedNickname);
   const [editingName, setEditingName] = useState(() => !savedNickname());
-  const [status, setStatus] = useState<"idle" | "sending" | "done" | "error">("idle");
-  const [message, setMessage] = useState("");
+  const status = useTris(s => s.submissionStatus);
+  const message = useTris(s => s.submissionMessage);
   const submitted = useTris(s => s.submittedRunId);
-  const locked = useRef(false);
-  if (!run || !runId || run.score <= 0 || (run.mode === "sprint" && !run.completed)) return null;
+  if (!run || !runId || !eligibleForLeaderboard(run)) return null;
+  const done = submitted === runId || status === "done";
   return <div className="submit-score">
-    {submitted === runId || status === "done" ? <p className="submission-message" role="status">{message || "Your result has been posted."}</p> : session === "offline" ? <p className="submission-message">This run couldn’t connect to the leaderboard. Your local record is saved.</p> : <form onSubmit={async e => {
+    <form onSubmit={e => {
       e.preventDefault();
-      if (locked.current || session !== "ready") return;
-      locked.current = true; setStatus("sending"); setMessage("");
-      try {
-        const result = await postLeaderboardRun(runId, run, nickname);
-        useTris.getState().patch({ submittedRunId: runId });
-        setStatus("done");
-        setMessage(result.rank ? `${result.improved ? "You made" : "Your best holds"} #${result.rank} in the top 10.` : "This run didn’t make the top 10. Your local personal best is saved.");
-      } catch (error) { setStatus("error"); setMessage(error instanceof Error ? error.message : "Couldn’t post. Please try again."); }
-      finally { locked.current = false; }
+      if (!done && status !== "sending" && session === "ready") void submitScore(runId, run, nickname);
     }}>
       {editingName ? <>
         <label htmlFor="leaderboard-name">Your leaderboard name</label>
         <input id="leaderboard-name" value={nickname} onChange={e => { setNickname(e.target.value); rememberNickname(e.target.value); }} minLength={2} maxLength={16} pattern={"[A-Za-z0-9 _\\-]{2,16}"} title="2–16 letters, numbers, spaces, underscores or hyphens" placeholder="Player name" autoComplete="nickname" required disabled={status === "sending"} />
-        <p className="submission-message">We’ll remember your name on this device.</p>
+        <p className="submission-message">Your name is remembered here. Future runs post automatically.</p>
       </> : <p className="submission-message">Playing as <strong>{nickname}</strong> · <button type="button" className="text-link" disabled={status === "sending"} onClick={() => setEditingName(true)}>Change name</button></p>}
-      <button className="menu-btn primary" type="submit" disabled={session !== "ready" || status === "sending"}>{status === "sending" ? "Posting…" : session === "pending" ? "Connecting…" : run.mode === "sprint" ? "Post time" : "Post score"}</button>
-      <p className="submission-message" role="status">{message || "Your name and result will be public."}</p>
-    </form>}
+      {done ? <p className="submission-message" role="status">{message || "Your result has been posted."}</p> : session === "offline" ? <p className="submission-message" role="status">This run couldn’t connect to the leaderboard. Your local record is saved.</p> : <>
+        <button className="menu-btn primary" type="submit" disabled={session !== "ready" || status === "sending"}>{status === "sending" ? "Posting…" : session === "pending" ? "Connecting…" : status === "error" ? "Try again" : run.mode === "sprint" ? "Post time" : "Post score"}</button>
+        <p className="submission-message" role="status">{message || "Your name and result will be public."}</p>
+      </>}
+    </form>
     <button type="button" className="text-link" onClick={() => useTris.getState().setOverlay("leaderboard")}>View top 10</button>
   </div>;
 }
