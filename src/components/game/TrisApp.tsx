@@ -44,9 +44,8 @@ export function TrisApp() {
       <PrefersReducedSync />
       <div className="bezel" />
       <header className="tris-top">
-        <h1 className="wordmark" aria-label="3TRIS">
-          <span className="wordmark-3">3</span>
-          <span>TRIS</span>
+        <h1 className="wordmark" aria-label="FallingBlocks">
+          <span>Falling</span><span className="wordmark-blocks">Blocks</span>
         </h1>
         <span className="edition-label">{mode === "sprint" ? "40 LINES / SPRINT" : "ENDLESS / SURVIVAL"}</span>
         <nav className="top-nav" aria-label="Game controls">
@@ -102,7 +101,7 @@ export function TrisApp() {
 
         <div className="well-wrap" ref={stageRef}>
           <div className="well">
-            <canvas ref={canvasRef} className="playfield" aria-label="3TRIS game board. Use arrow keys to move, Z and X to rotate, and Space to drop." />
+            <canvas ref={canvasRef} className="playfield" aria-label="FallingBlocks game board. Use arrow keys to move, Z and X to rotate, and Space to drop." />
             {mode === "sprint" && phase !== "ready" ? <div className="sprint-progress" role="progressbar" aria-label="Sprint lines cleared" aria-valuenow={Math.min(lines, 40)} aria-valuemin={0} aria-valuemax={40}><span style={{ width: `${Math.min(lines / 40, 1) * 100}%` }} /></div> : null}
             <PlayOverlays ctrl={ctrl} />
           </div>
@@ -155,7 +154,7 @@ export function TrisApp() {
         ) : phase === "playing" ? (
           <p className="foot-copy muted-copy">R restart · ESC pause</p>
         ) : (
-          <p className="foot-copy muted-copy">3TRIS</p>
+          <p className="foot-copy muted-copy">FallingBlocks</p>
         )}
       </footer>
     </div>
