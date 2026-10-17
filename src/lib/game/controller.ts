@@ -44,15 +44,16 @@ export function createController(opts: {
   let last = performance.now();
   let hudAcc = 0;
   let running = true;
+  let renderDirty = true;
   let labelTimer = 0;
   let toastTimer = 0;
-  let bestPulse = 0;
   let lastBestScore = useTris.getState().records.highScore;
   let bestCrossMs: number | null = null;
   let rankedTicket: Promise<unknown> = Promise.resolve();
 
   const syncHud = (force = false) => {
-    const snap = engine.snapshot();
+    // HUD data does not need a render snapshot or a ghost-position calculation.
+    const snap = engine;
     const st = useTris.getState();
     if (
       !force &&
@@ -61,6 +62,8 @@ export function createController(opts: {
       st.lines === snap.lines &&
       st.level === snap.level &&
       st.hold === snap.hold &&
+      st.holdLocked === snap.holdLocked &&
+      st.pieces === snap.pieces &&
       Math.floor(st.timeMs / 250) === Math.floor(snap.timeMs / 250)
     ) {
       useTris.getState().patch({ timeMs: snap.timeMs, pieces: snap.pieces });
@@ -74,7 +77,10 @@ export function createController(opts: {
       timeMs: snap.timeMs,
       hold: snap.hold,
       holdLocked: snap.holdLocked,
-      next: snap.next,
+      next: (() => {
+        const next = engine.peekNext(6);
+        return next.length === st.next.length && next.every((id, i) => id === st.next[i]) ? st.next : next;
+      })(),
       combo: snap.combo,
       b2b: snap.b2b,
       pieces: snap.pieces,
@@ -82,6 +88,7 @@ export function createController(opts: {
   };
 
   engine.on((e) => {
+    renderDirty = true;
     if (e.type === "move") audio.move();
     if (e.type === "rotate") audio.rotate();
     if (e.type === "hold") audio.hold();
@@ -103,7 +110,6 @@ export function createController(opts: {
         if (engine.score > rec.highScore) {
           useTris.getState().patch({ newBest: true });
           audio.newBest();
-          bestPulse = 2.2;
         }
       }
     }
@@ -189,7 +195,6 @@ export function createController(opts: {
       }
       if (e.total > rec.highScore && rec.highScore > 0 && !useTris.getState().newBest) {
         useTris.getState().patch({ newBest: true, bestCrossMs });
-        bestPulse = 2.2;
       }
     }
     hudAcc = 1;
@@ -208,6 +213,7 @@ export function createController(opts: {
     const maxW = Math.max(80, parentW - railW - gap);
     const cell = Math.max(8, Math.floor(Math.min(maxW / COLS, (h - 4) / VISIBLE_ROWS)));
     renderer.resize(cell * COLS, cell * VISIBLE_ROWS);
+    renderDirty = true;
   };
 
   const loop = (now: number) => {
@@ -222,6 +228,7 @@ export function createController(opts: {
     }
     input.tick(now);
     engine.step(dt, input.softHeld());
+    const animating = juice.impact > 0 || juice.flash > 0 || juice.trauma > 0 || Math.abs(1 - juice.squash) > 0.001 || !!engine.landFlash;
     juice.update(dt);
     if (labelTimer > 0) {
       labelTimer -= dt;
@@ -231,17 +238,14 @@ export function createController(opts: {
       toastTimer -= dt;
       if (toastTimer <= 0) useTris.getState().patch({ levelToast: null });
     }
-    if (bestPulse > 0) {
-      bestPulse -= dt;
-      if (bestPulse <= 0 && engine.phase === "playing") {
-        /* keep badge until run ends if still beating */
-      }
+    if (engine.phase === "playing" || renderDirty || animating) {
+      renderer.draw(engine.snapshot(), settings, juice);
+      renderDirty = false;
     }
-    renderer.draw(engine.snapshot(), settings, juice);
     hudAcc += dt;
     if (hudAcc >= 0.05) {
       hudAcc = 0;
-      syncHud();
+      if (engine.phase === "playing" || animating) syncHud();
     }
     raf = requestAnimationFrame(loop);
   };
@@ -342,10 +346,15 @@ export function createController(opts: {
 
   const onVis = () => {
     if (document.hidden) {
+      cancelAnimationFrame(raf);
       input.clearHeld();
       if (engine.phase === "playing") pause();
     } else {
       audio.resume();
+      last = performance.now();
+      renderDirty = true;
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(loop);
     }
   };
 
@@ -373,6 +382,7 @@ export function createController(opts: {
   function pause() {
     if (engine.phase !== "playing") return;
     engine.pause();
+    renderDirty = true;
     input.enabled = false;
     input.clearHeld();
     input.buffer = null;
@@ -390,6 +400,7 @@ export function createController(opts: {
   }
 
   function quit() {
+    renderDirty = true;
     engine.toReady();
     input.enabled = true;
     input.clearHeld();
@@ -410,6 +421,7 @@ export function createController(opts: {
   }
 
   function applySettings(s: Settings) {
+    renderDirty = true;
     settings = s;
     engine.applySettings(s);
     input.applySettings(s);
@@ -446,7 +458,7 @@ export function createController(opts: {
   ro.observe(opts.stage);
 
   last = performance.now();
-  raf = requestAnimationFrame(loop);
+  if (!document.hidden) raf = requestAnimationFrame(loop);
 
   const api: Controller = {
     destroy: () => {

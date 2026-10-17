@@ -193,7 +193,12 @@ export class Input {
 
   pollPad(now: number) {
     const pads = navigator.getGamepads?.() ?? [];
-    const pad = Array.from(pads).find((p) => p && p.mapping === "standard") ?? Array.from(pads).find(Boolean);
+    let pad: Gamepad | null = null;
+    for (const candidate of pads) {
+      if (!candidate) continue;
+      pad ??= candidate;
+      if (candidate.mapping === "standard") { pad = candidate; break; }
+    }
     if (!pad || !this.enabled) {
       if (this.padDir !== 0) this.releasePadDir();
       this.padSoft = false;
