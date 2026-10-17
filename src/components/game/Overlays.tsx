@@ -1,6 +1,6 @@
 import { createPortal } from "react-dom";
 import { Leaderboard, SubmitScore } from "./Leaderboard";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Controller } from "@/lib/game/controller";
 import { DEFAULT_SETTINGS, ACTION_LABELS, HANDLING_PRESETS, codesLabel, saveSettings } from "@/lib/game/settings";
 import { formatScore, formatTime, formatSprintTime, useTris, type SettingsTab } from "@/lib/game/store";
@@ -51,6 +51,13 @@ export function PlayOverlays({ ctrl }: { ctrl: Controller | null }) {
   const pieces = useTris((s) => s.pieces);
   const bestCrossMs = useTris((s) => s.bestCrossMs);
   const history = useTris((s) => s.history);
+  const reducedMotion = useTris((s) => s.settings.reducedMotion);
+  const [readyVisible, setReadyVisible] = useState(phase === "ready");
+  useEffect(() => {
+    if (phase === "ready") { setReadyVisible(true); return; }
+    const timeout = window.setTimeout(() => setReadyVisible(false), reducedMotion ? 0 : 180);
+    return () => window.clearTimeout(timeout);
+  }, [phase, reducedMotion]);
 
   return (
     <>
@@ -65,19 +72,26 @@ export function PlayOverlays({ ctrl }: { ctrl: Controller | null }) {
         </div>
       ) : null}
 
-      {phase === "ready" && overlay === null ? (
-        <div className="ready-hint">
-          <p className="ready-eyebrow">ONE MORE RUN.</p>
-          <h2 className="ready-title">Find your<br />flow.</h2>
-          <p className="ready-copy">{mode === "sprint" ? "40 lines. Your fastest time." : "Stack. Clear. Keep going."}</p>
+      {(phase === "ready" || readyVisible) && overlay === null ? (
+        <div className={`ready-hint opening-screen${phase !== "ready" ? " is-leaving" : ""}`} aria-hidden={phase !== "ready"} inert={phase !== "ready"}>
+          <div className="opening-brand">
+            <svg className="opening-tiles" viewBox="0 0 80 80" aria-hidden="true">
+              <rect className="opening-tile tile-a" x="8" y="8" width="28" height="28" rx="6" />
+              <rect className="opening-tile tile-b" x="44" y="8" width="28" height="28" rx="6" />
+              <rect className="opening-tile tile-c" x="8" y="44" width="28" height="28" rx="6" />
+              <rect className="opening-tile tile-d" x="44" y="44" width="28" height="28" rx="6" />
+            </svg>
+            <h2 className="opening-title">FallingBlocks<span>.</span></h2>
+          </div>
+          <p className="opening-description">{mode === "sprint" ? "Clear 40 lines against the clock." : "Stack blocks. Clear full lines."}</p>
           <div className="mode-picker" aria-label="Game mode">
             {(["endless", "sprint"] as const).map((m) => <button key={m} type="button" aria-pressed={mode === m} onClick={() => useTris.getState().patch({ mode: m, records: loadRecords(m) })}>{m === "endless" ? "Endless" : "40-line sprint"}</button>)}
           </div>
-          <p className="ready-record">{mode === "sprint" ? records.sprintBestMs ? `BEST ${formatSprintTime(records.sprintBestMs)}` : "SET YOUR FIRST TIME" : records.highScore ? `BEST ${formatScore(records.highScore)}` : "SET YOUR FIRST BEST"}</p>
-          <button type="button" className="start-cta" disabled={!ctrl} onClick={(e) => { ctrl?.start(); e.currentTarget.blur(); }}>
-            Start playing <span aria-hidden="true">↗</span>
+          <p className="ready-record">{mode === "sprint" ? records.sprintBestMs ? `BEST ${formatSprintTime(records.sprintBestMs)}` : "\u00a0" : records.highScore ? `BEST ${formatScore(records.highScore)}` : "\u00a0"}</p>
+          <button type="button" className="start-cta" disabled={!ctrl || phase !== "ready"} onClick={(e) => { ctrl?.start(); e.currentTarget.blur(); }}>
+            Play <span aria-hidden="true">↗</span>
           </button>
-          <p className="start-shortcut">or press SPACE</p>
+          <p className="start-shortcut">Press <kbd>Space</kbd> to play</p>
         </div>
       ) : null}
 
@@ -206,6 +220,7 @@ export function ChromeOverlays({ ctrl }: { ctrl: Controller | null }) {
 }
 
 const UPDATE_LOG = [
+  { date: "2026-10-17", label: "October 17, 2026", title: "A smoother way in", changes: ["A new animated opening flows straight into the game, with no waiting to play.", "Cleaner Fixel typography and a simpler welcome screen.", "Opening animations respect your reduced-motion preference."] },
   { date: "2026-10-15", label: "October 15, 2026", title: "A fresh start as FallingBlocks", changes: ["Refreshed FallingBlocks branding, modern typography, and calmer navigation.", "A cleaner results screen, with your score up front and a clear way to play again.", "Finished runs post automatically when your player name is remembered.", "Our new home: fallingblocks.vip."] },
   { date: "2026-10-08", label: "October 8, 2026", title: "More ways to chase a best", changes: ["Worldwide top 10 for Endless scores and 40-line Sprint times.", "Personal bests and recent runs saved on your device.", "Touch controls for mobile, plus clearer line-clear feedback."] },
 ];

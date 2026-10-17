@@ -40,7 +40,7 @@ export function TrisApp() {
   const nextShown = settings.showNext ? next.slice(0, settings.nextCount) : [];
 
   return (
-    <div className="tris-root">
+    <div className={`tris-root${settings.reducedMotion ? " motion-reduced" : ""}`}>
       <PrefersReducedSync />
       <div className="bezel" />
       <header className="tris-top">
