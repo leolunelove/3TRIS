@@ -14,8 +14,6 @@ export function TrisApp() {
   const score = useTris((s) => s.score);
   const lines = useTris((s) => s.lines);
   const level = useTris((s) => s.level);
-  const pieces = useTris((s) => s.pieces);
-  const timeMs = useTris((s) => s.timeMs);
   const hold = useTris((s) => s.hold);
   const holdLocked = useTris((s) => s.holdLocked);
   const next = useTris((s) => s.next);
@@ -87,17 +85,7 @@ export function TrisApp() {
               <p className="stat-num">{mode === "sprint" ? `${Math.min(lines, 40)}/40` : String(lines).padStart(3, "0")}</p>
             </section>
           </div>
-          <div className="stat-row">
-            <section>
-              <p className="slot-label">Time</p>
-              <p className="stat-num">{formatTime(timeMs)}</p>
-            </section>
-            <section>
-              <p className="slot-label">Pace</p>
-              <p className="stat-num">{timeMs > 400 ? (pieces / (timeMs / 1000)).toFixed(2) : "—"}</p>
-              <p className="stat-sub">{pieces} pcs</p>
-            </section>
-          </div>
+          <ClockAndPace />
         </aside>
 
         <div className="well-wrap" ref={stageRef}>
@@ -142,7 +130,7 @@ export function TrisApp() {
         </section>
         <section>
           <p className="slot-label">Time</p>
-          <p className="stat-num">{formatTime(timeMs)}</p>
+          <MobileClock />
         </section>
       </div>
 
@@ -160,4 +148,27 @@ export function TrisApp() {
       </footer>
     </div>
   );
+}
+
+function ClockAndPace() {
+  const timeMs = useTris(s => s.timeMs);
+  const pieces = useTris(s => s.pieces);
+  return (
+    <div className="stat-row">
+      <section>
+        <p className="slot-label">Time</p>
+        <p className="stat-num">{formatTime(timeMs)}</p>
+      </section>
+      <section>
+        <p className="slot-label">Pace</p>
+        <p className="stat-num">{timeMs > 400 ? (pieces / (timeMs / 1000)).toFixed(2) : "—"}</p>
+        <p className="stat-sub">{pieces} pcs</p>
+      </section>
+    </div>
+  );
+}
+
+function MobileClock() {
+  const time = useTris(s => formatTime(s.timeMs));
+  return <p className="stat-num">{time}</p>;
 }

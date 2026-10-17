@@ -1,6 +1,6 @@
 import { createPortal } from "react-dom";
 import { Leaderboard, SubmitScore } from "./Leaderboard";
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import type { Controller } from "@/lib/game/controller";
 import { DEFAULT_SETTINGS, ACTION_LABELS, HANDLING_PRESETS, codesLabel, saveSettings } from "@/lib/game/settings";
 import { formatScore, formatTime, formatSprintTime, useTris, type SettingsTab } from "@/lib/game/store";
@@ -34,7 +34,7 @@ function EndRunFrame({ children }: { children: React.ReactNode }) {
   </div>, document.body);
 }
 
-export function PlayOverlays({ ctrl }: { ctrl: Controller | null }) {
+export const PlayOverlays = memo(function PlayOverlays({ ctrl }: { ctrl: Controller | null }) {
   const phase = useTris((s) => s.phase);
   const mode = useTris((s) => s.mode);
   const completed = useTris((s) => s.completed);
@@ -43,7 +43,7 @@ export function PlayOverlays({ ctrl }: { ctrl: Controller | null }) {
   const score = useTris((s) => s.score);
   const lines = useTris((s) => s.lines);
   const level = useTris((s) => s.level);
-  const timeMs = useTris((s) => s.timeMs);
+  const timeMs = useTris((s) => s.phase === "over" || s.overlay === "results" ? s.timeMs : 0);
   const newBest = useTris((s) => s.newBest);
   const records = useTris((s) => s.records);
   const lastClearLabel = useTris((s) => s.lastClearLabel);
@@ -208,19 +208,19 @@ export function PlayOverlays({ ctrl }: { ctrl: Controller | null }) {
       ) : null}
     </>
   );
-}
+});
 
-export function ChromeOverlays({ ctrl }: { ctrl: Controller | null }) {
+export const ChromeOverlays = memo(function ChromeOverlays({ ctrl }: { ctrl: Controller | null }) {
   const overlay = useTris((s) => s.overlay);
   if (overlay === "leaderboard") return <Leaderboard />;
   if (overlay === "updates") return <UpdatesOverlay />;
   if (overlay === "help") return <HelpOverlay />;
   if (overlay === "settings") return <SettingsOverlay ctrl={ctrl} />;
   return null;
-}
+});
 
 const UPDATE_LOG = [
-  { date: "2026-10-17", label: "October 17, 2026", title: "A smoother way in", changes: ["A new animated opening flows straight into the game, with no waiting to play.", "Cleaner Fixel typography and a simpler welcome screen.", "Opening animations respect your reduced-motion preference."] },
+  { date: "2026-10-17", label: "October 17, 2026", title: "A smoother way in", changes: ["A new animated opening flows straight into the game, with no waiting to play.", "Cleaner Fixel typography and a simpler welcome screen.", "Opening animations respect your reduced-motion preference.", "Lighter font assets and fewer redraws, with background rendering suspended when the tab is hidden."] },
   { date: "2026-10-15", label: "October 15, 2026", title: "A fresh start as FallingBlocks", changes: ["Refreshed FallingBlocks branding, modern typography, and calmer navigation.", "A cleaner results screen, with your score up front and a clear way to play again.", "Finished runs post automatically when your player name is remembered.", "Our new home: fallingblocks.vip."] },
   { date: "2026-10-08", label: "October 8, 2026", title: "More ways to chase a best", changes: ["Worldwide top 10 for Endless scores and 40-line Sprint times.", "Personal bests and recent runs saved on your device.", "Touch controls for mobile, plus clearer line-clear feedback."] },
 ];

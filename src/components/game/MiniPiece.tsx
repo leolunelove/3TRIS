@@ -1,8 +1,9 @@
+import { memo } from "react";
 import { cellsAt, paletteColors } from "@/lib/game/pieces";
 import { pieceBounds } from "@/lib/game/renderer";
 import type { Palette, PieceId } from "@/lib/game/types";
 
-export function MiniPiece({
+export const MiniPiece = memo(function MiniPiece({
   id,
   dimmed = false,
   size = 14,
@@ -49,4 +50,4 @@ export function MiniPiece({
       })}
     </svg>
   );
-}
+});
